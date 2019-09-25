@@ -7,6 +7,7 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const bcrypt = require('bcryptjs');
 const multer = require('multer');
+const fs = require('fs');
 
 const Schema = mongoose.Schema;
 const User = require('./models/users');
@@ -142,7 +143,7 @@ app.patch('/users/:id', function(req, res){
     const hash = bcrypt.hashSync(req.body.password);
     User.findById(id, function(err, user){
         // CHECK THE LINE BELOW: Should 'user.id' be 'user_id'? Is "userId" ok?
-        if(user['user.id'] == req.body.userId){
+        if(user['user.id'] == req.body.userID){
             const newUser = {
                 username: req.body.username,
                 email: req.body.email,
@@ -220,26 +221,12 @@ app.get('/getItem/:id', function(req, res){
   });
 });
 
-
-//////////////////////
-// app.post('/addItem/:id', function(req,res){
-//     const id = req.params.id;
-//     console.log('woring now');
-//     Item.findById(id, function(err, item){
-//         if (item.user_id == req.body.userID) {
-//             res.send(item);
-//         } else {
-//             res.send('401');
-//         }
-//     });
-// });
-
 app.patch('/editItem/:id', function(req,res){
     const id = req.params.id;
     console.log(id);
     Item.findById(id, function(err,item){
       console.log('running update');
-       if (item.user_id == req.body.userID) {
+       if (item.user_id == req.body.userId) {
          const newItem = {
            item_name: req.body.itemName,
            item_description: req.body.itemDescription,
@@ -265,68 +252,82 @@ app.patch('/editItem/:id', function(req,res){
 //////////////////////
 app.delete('/addItem/:id', function(req, res){
     const id = req.params.id;
-    console.log(id);
+    // console.log(id);
     Item.findById(id, function(err, item){
-        if(item.user_id == req.body.userID){
-            Item.deleteOne({ _id: id }, function (err) {
-                res.send('deleted');
-            });
+        if (err) {
+            res.send('cannot find image to delete from mongo');
         } else {
-            res.send('401');
+            if (fs.existsSync(item.image_URL)) {
+                fs.unlink(item.image_URL, (err) => {
+                    if (err) {
+                        res.send('cannot delete image from server');
+                    } else {
+                        Item.deleteOne({_id:id},function(err){
+                            if (err) {
+                                res.send('Cannot delete image from mongoDB');
+                            } else {
+                                res.send('image was removed from mongoDB');
+                            }
+                        })
+                    }
+                })
+            } else {
+                res.send('Cannot find image to delete in the server');
+            }
         }
-    }).catch(err => res.send('cannot find product with that id'));
+    }).catch(err => res.send('cannot find an item with that id'));
 });
 
-
-// CREATE A COMMENT
-//////////////////////
-app.post('/comment', function(req, res) {
-    const comment = new Comment({
-      _id: new mongoose.Types.ObjectId(),
-      comment: req.body.comment
-    });
-    comments.save().then(result => {
-      res.send(result);
-    }).catch(err => res.send(err));
-});
-
-// READ A COMMENT
-//////////////////////
-app.get('/allComments', function(req, res){
-    Comment.find().then(result => {
-        res.send(result);
-    });
-});
-
-// UPDATE A COMMENT
-//////////////////////
-app.post('/allComments/:id', function(req, res){
-  const id = req.params.id;
-  console.log(id);
-  Comment.findById(id, function(err, comment) {
-    if (comment.user_id == req.body.userID) {
-      res.send(comment)
-    } else {
-      res.send('401')
-    }
-  })
-});
-
-// DELETE A COMMENT
-//////////////////////
-app.delete('/allComments/:id', function(req, res){
-    const id = req.params.id;
-    console.log(id);
-    Comment.findById(id, function(err, comment){
-        if(comment.user_id == req.body.userID){
-            Comment.deleteOne({ _id: id }, function (err) {
-                res.send('deleted');
-            });
-        } else {
-            res.send('401');
-        }
-    }).catch(err => res.send('cannot find comment with that id'));
-});
+//
+// // CREATE A COMMENT
+// //////////////////////
+// app.post('/comment', function(req, res) {
+//     const comment = new Comment({
+//       _id: new mongoose.Types.ObjectId(),
+//       comment: req.body.comment
+//     });
+//     comments.save().then(result => {
+//       res.send(result);
+//     }).catch(err => res.send(err));
+// });
+//
+// // READ A COMMENT
+// //////////////////////
+// app.get('/allComments', function(req, res){
+//     Comment.find().then(result => {
+//         res.send(result);
+//     });
+// });
+//
+// // UPDATE A COMMENT
+// //////////////////////
+// app.post('/allComments/:id', function(req, res){
+//   const id = req.params.id;
+//   console.log(id);
+//   Comment.findById(id, function(err, comment) {
+//     if (comment.user_id == req.body.userID) {
+//       res.send(comment)
+//     } else {
+//       res.send('401')
+//     }
+//   })
+// });
+//
+// // DELETE A COMMENT
+// //////////////////////
+// app.delete('/allComments/:id', function(req, res){
+//     const id = req.params.id;
+//     console.log(id);
+//     Comment.findById(id, function(err, comment){
+//         if(comment.user_id == req.body.userID){
+//             Comment.deleteOne({ _id: id }, function (err) {
+//                 res.send('deleted');
+//             });
+//         } else {
+//             res.send('401');
+//         }
+//     }).catch(err => res.send('cannot find comments with that id'));
+// });
 
 
 app.listen(port, () => {
