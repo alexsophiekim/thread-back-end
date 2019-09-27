@@ -32,9 +32,15 @@ const storage = multer.diskStorage({
     destination: function (req, file, cb) {
         cb(null, './uploads');
     },
-    filename: function (req, file, cb) {
-        cb(null, Date.now() + '-' + file.originalname);
-    }
+    filename: function(req, file, cb) {
+    console.log(file);
+    var filename = file.originalname;
+    filename = filename.replace(/\s/g,'');
+    // const str = file.filename;
+    // str = str.replace(/\s+/g, '');
+    cb(null, Date.now() + '-' + filename);
+  }
+
 });
 
 const filterFile = (req, file, cb) => {
@@ -141,20 +147,20 @@ app.patch('/users/:id', function(req, res){
 
 // CREATE A NEW ITEM
 //////////////////////
-app.post('/addItem', upload.single('uploadedImage'),function(req, res){
-    console.log(req.body);
-    res.send('from post req');
+app.post('/addItem', upload.single('itemImg'),function(req, res){
+
     const item = new Item({
         _id:  new mongoose.Types.ObjectId(),
         item_name: req.body.itemName,
         item_description: req.body.itemDescription,
         clothing_type:   req.body.itemType,
         image_URL: req.file.path,
-        price: req.body.price,
+        price: req.body.itemPrice,
         condition: req.body.itemCondition,
         user_id: req.body.userID,
         bought: req.body.itemBought
     });
+
     item.save().then(result => {
         res.send(result);
     }).catch(err => res.send(err));
@@ -194,22 +200,23 @@ app.get('/getItem/:id', function(req, res){
 });
 
 app.patch('/editItem/:id', function(req,res){
+
     const id = req.params.id;
     console.log(id);
     Item.findById(id, function(err,item){
-        console.log('running update');
-        if (item.user_id == req.body.userID) {
+        console.log(item);
+        console.log(req.body);
+
+        if (item.user_id == req.body.userId) {
+            console.log('You own this Item');
             const newItem = {
                 item_name: req.body.itemName,
                 item_description: req.body.itemDescription,
                 clothing_type:   req.body.itemType,
-                // image_URL: String,
-                // you need to get Multer working!
-                price: req.body.price,
-                condition: req.body.itemCondition,
-                user_id: req.body.userID,
-                bought: req.body.itemBought
+                price: req.body.itemPrice,
+                condition: req.body.itemCondition
             };
+            console.log(newItem);
             Item.updateOne({_id: id}, newItem).then(result =>{
                 res.send(result);
             }).catch(err => res.send(err));
@@ -217,6 +224,7 @@ app.patch('/editItem/:id', function(req,res){
             res.send('401');
         }
     }).catch(err=> res.send('cannot find Item with that id'));
+      // res.send('sent from update');
 });
 
 
@@ -240,14 +248,39 @@ app.delete('/addItem/:id', function(req, res){
                             } else {
                                 res.send('image was removed from mongoDB');
                             }
-                        })
+                        });
                     }
-                })
+                });
             } else {
                 res.send('Cannot find image to delete in the server');
             }
         }
     }).catch(err => res.send('cannot find an item with that id'));
+});
+
+// BUY AN ITEM
+//////////////////////
+app.get('/getItem/:id', function(req, res){
+    // res.send('hello from the single item route');
+    const id = req.params.id;
+    Item.findById(id, function(err, item){
+        res.send(item);
+    });
+});
+
+app.patch('/buyItem/:id', function(req,res){
+  console.log('connect to buy now');
+    const id = req.params.id;
+    console.log(id);
+    Item.findById(id, function(err,item){
+      console.log(item);
+      const soldItem = {
+          bought: true
+      };
+      Item.updateOne({_id: id}, soldItem).then(result =>{
+          res.send(result);
+      }).catch(err => res.send(err));
+  }).catch(err=> res.send('cannot buy it'));
 });
 
 app.listen(port, () => {
