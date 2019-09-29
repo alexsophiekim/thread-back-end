@@ -158,7 +158,7 @@ app.post('/addItem', upload.single('itemImg'),function(req, res){
         price: req.body.itemPrice,
         condition: req.body.itemCondition,
         user_id: req.body.userID,
-        bought: req.body.itemBought
+        bought: false
     });
 
     item.save().then(result => {
@@ -230,7 +230,7 @@ app.patch('/editItem/:id', function(req,res){
 
 // DELETE AN ITEM
 //////////////////////
-app.delete('/addItem/:id', function(req, res){
+app.delete('/deleteItem/:id', function(req, res){
     const id = req.params.id;
     // console.log(id);
     Item.findById(id, function(err, item){
@@ -280,7 +280,7 @@ app.patch('/buyItem/:id', function(req,res){
       Item.updateOne({_id: id}, soldItem).then(result =>{
           res.send(result);
       }).catch(err => res.send(err));
-  }).catch(err=> res.send('cannot buy it'));
+  }).catch(err=> res.send(`Cannot buy this item.`));
 });
 
 app.listen(port, () => {
